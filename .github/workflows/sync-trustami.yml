@@ -1,1 +1,33 @@
 
+name: Trustami-Bewertung synchronisieren
+
+on:
+  schedule:
+    # Standard: 1x täglich um 05:00 UTC (= 06:00/07:00 deutscher Zeit, je nach
+    # Sommer-/Winterzeit). Für stündlich stattdessen: "0 * * * *"
+    - cron: "0 5 * * *"
+  workflow_dispatch: {} # erlaubt manuelles Auslösen über den "Run workflow"-Button
+
+permissions:
+  contents: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Bewertung von Trustami abrufen
+        run: node scrape-trustami.js
+
+      - name: Änderungen committen (nur falls sich etwas geändert hat)
+        run: |
+          git config user.name "trustami-sync-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add rating.json
+          git diff --cached --quiet || git commit -m "Update Trustami-Bewertung"
+          git push
